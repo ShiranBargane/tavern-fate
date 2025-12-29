@@ -347,8 +347,8 @@ export default function App() {
             <div 
               className="relative preserve-3d transition-transform duration-700 z-10"
               style={{ 
-                // LOWERED COIN SIGNIFICANTLY: +50px
-                transform: 'rotateX(30deg) translateY(50px)', 
+                // ADJUSTED TO 20px AS REQUESTED
+                transform: 'rotateX(30deg) translateY(20px)', 
               }}
             >
               <Coin 
@@ -409,8 +409,8 @@ export default function App() {
                 
                    <div className={`transition-all duration-300 transform ${isFlipping ? 'opacity-0 translate-y-8 blur-sm' : 'opacity-100 translate-y-0 blur-0'}`}>
                      {(lastResult || mode === GameMode.GAME_ACTIVE) && (
-                       // REMOVED ALL PADDING. Added negative margin. This will pull it very close to the lowered coin.
-                       <div className="inline-flex flex-col items-center gap-1 md:gap-6 mt-[-30px] md:mt-0">
+                       // INCREASED NEGATIVE MARGIN (-60px) TO FOLLOW THE COIN UPWARDS
+                       <div className="inline-flex flex-col items-center gap-1 md:gap-6 mt-[-60px] md:mt-[-20px]">
                           {lastResult && (
                               <div className={`text-5xl md:text-9xl tracking-widest font-bold drop-shadow-[6px_6px_0_rgba(0,0,0,0.8)] ${lastResult === CoinSide.HEADS ? 'text-gold-bright' : 'text-slate-300'}`}>
                                  {lastResult}
@@ -447,8 +447,8 @@ export default function App() {
                      )}
                      
                      {!lastResult && mode === GameMode.FREE_PLAY && (
-                       // Removed top padding
-                       <div className="flex flex-col gap-3 md:gap-6 mt-[-30px] md:mt-0">
+                       // INCREASED NEGATIVE MARGIN HERE TOO
+                       <div className="flex flex-col gap-3 md:gap-6 mt-[-60px] md:mt-[-20px]">
                          <div className="inline-block px-4 py-2 md:px-6 md:py-3 bg-black/60 backdrop-blur-md border border-parchment-dim/30 rounded-lg cursor-pointer hover:border-parchment transition-colors" onClick={handleFlip}>
                            <p className="text-parchment text-lg md:text-xl tracking-widest animate-pulse">
                              [ CLICK THE COIN TO DECIDE ]
