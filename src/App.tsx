@@ -240,8 +240,7 @@ export default function App() {
 
   // Keyboard Support
   useEffect(() => {
-    // We use 'any' type for the event to avoid TypeScript conflict between React.KeyboardEvent and global KeyboardEvent
-    const handleKeyDown = (e: any) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         if (mode === GameMode.FREE_PLAY || mode === GameMode.GAME_ACTIVE) {
            e.preventDefault(); 

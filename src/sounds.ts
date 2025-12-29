@@ -2,19 +2,28 @@
 
 let audioCtx: AudioContext | null = null;
 
-const initAudio = () => {
+const initAudio = (): AudioContext => {
   if (!audioCtx) {
-    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Handle the webkit prefix for Safari/older browsers safely
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+        audioCtx = new AudioContextClass();
+    }
   }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
+  // Safe check if context exists and is suspended
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(e => console.error(e));
   }
-  return audioCtx;
+  
+  // Cast to AudioContext because usage implies we expect it to work or fail gracefully elsewhere
+  return audioCtx as AudioContext;
 };
 
 // Generic Oscillator Helper
 const playTone = (freq: number, type: OscillatorType, duration: number, delay: number = 0, vol: number = 0.1) => {
   const ctx = initAudio();
+  if (!ctx) return; // Safety check
+
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
 
@@ -65,6 +74,7 @@ export const playSelect = () => {
 
 export const playCoinFlip = () => {
   const ctx = initAudio();
+  if (!ctx) return;
   
   // Randomize between 3 subtle pitch variations of the "High Tick"
   const variant = Math.floor(Math.random() * 3);
@@ -96,7 +106,8 @@ export const playWin = () => {
   // Gothic Victory Fanfare (Short Baroque-style Arpeggio)
   // Notes: A4, C#5, E5 (A Major) played quickly like a harpsichord/organ
   const ctx = initAudio();
-  const now = ctx.currentTime;
+  if (!ctx) return;
+
   const type = 'sawtooth'; // Sawtooth gives a brassy/organ retro vibe
 
   // Fast rising arpeggio
@@ -111,6 +122,7 @@ export const playWin = () => {
 export const playLose = () => {
   // Gothic Defeat: Deep, Somber Bell (Low frequency cluster)
   const ctx = initAudio();
+  if (!ctx) return;
   const now = ctx.currentTime;
 
   const duration = 1.5;
