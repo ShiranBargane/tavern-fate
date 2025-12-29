@@ -1,38 +1,55 @@
 // Simple 8-bit Retro Sound Synthesizer using Web Audio API
 
+// Global context to persist across function calls
 let audioCtx: AudioContext | null = null;
 
-const initAudio = (): AudioContext => {
+const initAudio = (): AudioContext | null => {
   if (!audioCtx) {
+    // Explicitly handle the webkit prefix for Safari
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (AudioContextClass) {
         audioCtx = new AudioContextClass();
     }
   }
-  return audioCtx as AudioContext;
+  return audioCtx;
 };
 
-// CRITICAL FOR MOBILE: Trigger this on the first user interaction (click/touch)
+// CRITICAL FOR MOBILE: This MUST be called inside a synchronous user event (touchstart/click)
 export const unlockAudioContext = () => {
     const ctx = initAudio();
     if (!ctx) return;
 
+    // Resume if suspended (common in Chrome/Safari)
     if (ctx.state === 'suspended') {
-        ctx.resume();
+        ctx.resume().then(() => {
+            console.log("Audio Context Resumed");
+        }).catch(e => console.error(e));
     }
 
-    // Play a silent buffer to wake up the audio engine on iOS
-    const buffer = ctx.createBuffer(1, 1, 22050);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.start(0);
+    // Play a tiny silent oscillator to force the audio engine to wake up on iOS
+    try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 440;
+        gain.gain.value = 0.001; // Nearly silent but active
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(0);
+        osc.stop(0.1);
+    } catch (e) {
+        console.error("Audio warmup failed", e);
+    }
 };
 
 // Generic Oscillator Helper
 const playTone = (freq: number, type: OscillatorType, duration: number, delay: number = 0, vol: number = 0.1) => {
   const ctx = initAudio();
   if (!ctx) return;
+
+  // Double check state before playing
+  if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+  }
 
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -42,8 +59,9 @@ const playTone = (freq: number, type: OscillatorType, duration: number, delay: n
   osc.type = type;
   osc.frequency.setValueAtTime(freq, t + delay);
   
-  gain.gain.setValueAtTime(vol, t + delay);
-  gain.gain.exponentialRampToValueAtTime(0.01, t + delay + duration);
+  // Slightly increased volume for mobile speakers
+  gain.gain.setValueAtTime(vol * 1.5, t + delay); 
+  gain.gain.exponentialRampToValueAtTime(0.001, t + delay + duration);
 
   osc.connect(gain);
   gain.connect(ctx.destination);
@@ -62,7 +80,7 @@ const playTick = (ctx: AudioContext, frequency: number) => {
   osc.frequency.setValueAtTime(frequency, t);
   
   // Instant attack, very fast decay
-  gain.gain.setValueAtTime(0.15, t);
+  gain.gain.setValueAtTime(0.2, t); // Boosted volume
   gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
 
   osc.connect(gain);
@@ -96,8 +114,8 @@ export const playCoinFlip = () => {
 
 export const playCoinLand = (isHeads: boolean) => {
   const baseFreq = isHeads ? 1200 : 900;
-  playTone(baseFreq, 'sine', 0.5, 0, 0.1);
-  playTone(baseFreq * 1.5, 'sine', 0.5, 0.05, 0.05);
+  playTone(baseFreq, 'sine', 0.5, 0, 0.15);
+  playTone(baseFreq * 1.5, 'sine', 0.5, 0.05, 0.1);
 };
 
 export const playWin = () => {
