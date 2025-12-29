@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Coin, CoinFaceType } from './components/Coin';
+import { useState, useCallback, useEffect } from 'react';
+import { Coin, type CoinFaceType } from './components/Coin';
 import { CRTEffect } from './components/CRTEffect';
 import { CoinSide } from './types';
 import { playBlip, playSelect, playCoinFlip, playCoinLand, playWin, playLose } from './sounds';
@@ -88,12 +88,14 @@ const LOSE_QUOTES = [
 const woodPattern = `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E")`;
 
 // --- TYPES ---
-enum GameMode {
-  FREE_PLAY = 'FREE_PLAY',
-  SETUP = 'SETUP',
-  GAME_ACTIVE = 'GAME_ACTIVE',
-  GAME_RESULT = 'GAME_RESULT',
-}
+const GameMode = {
+  FREE_PLAY: 'FREE_PLAY',
+  SETUP: 'SETUP',
+  GAME_ACTIVE: 'GAME_ACTIVE',
+  GAME_RESULT: 'GAME_RESULT',
+} as const;
+
+type GameMode = typeof GameMode[keyof typeof GameMode];
 
 interface GameState {
   targetFlips: number;
@@ -238,7 +240,8 @@ export default function App() {
 
   // Keyboard Support
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    // We use 'any' type for the event to avoid TypeScript conflict between React.KeyboardEvent and global KeyboardEvent
+    const handleKeyDown = (e: any) => {
       if (e.code === 'Space') {
         if (mode === GameMode.FREE_PLAY || mode === GameMode.GAME_ACTIVE) {
            e.preventDefault(); 
