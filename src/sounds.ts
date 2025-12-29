@@ -9,10 +9,24 @@ const initAudio = (): AudioContext => {
         audioCtx = new AudioContextClass();
     }
   }
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(e => console.error(e));
-  }
   return audioCtx as AudioContext;
+};
+
+// CRITICAL FOR MOBILE: Trigger this on the first user interaction (click/touch)
+export const unlockAudioContext = () => {
+    const ctx = initAudio();
+    if (!ctx) return;
+
+    if (ctx.state === 'suspended') {
+        ctx.resume();
+    }
+
+    // Play a silent buffer to wake up the audio engine on iOS
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
 };
 
 // Generic Oscillator Helper
