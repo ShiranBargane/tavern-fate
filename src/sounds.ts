@@ -103,12 +103,13 @@ export const playCoinLand = (isHeads: boolean) => {
 };
 
 export const playWin = () => {
-  // Gothic Victory Fanfare (Short Baroque-style Arpeggio)
-  // Notes: A4, C#5, E5 (A Major) played quickly like a harpsichord/organ
+  // Gothic Victory Fanfare
   const ctx = initAudio();
   if (!ctx) return;
+  
+  // REMOVED: const now = ctx.currentTime; (It was unused here and causing the error)
 
-  const type = 'sawtooth'; // Sawtooth gives a brassy/organ retro vibe
+  const type = 'sawtooth'; 
 
   // Fast rising arpeggio
   playTone(440.00, type, 0.15, 0.00, 0.15); // A4
@@ -123,15 +124,15 @@ export const playLose = () => {
   // Gothic Defeat: Deep, Somber Bell (Low frequency cluster)
   const ctx = initAudio();
   if (!ctx) return;
-  const now = ctx.currentTime;
+  const now = ctx.currentTime; // Used here, so we keep it
 
   const duration = 1.5;
 
   // Oscillator 1: Fundamental (Low C)
   const osc1 = ctx.createOscillator();
   const gain1 = ctx.createGain();
-  osc1.type = 'triangle'; // Triangle is cleaner, hollow like a bell
-  osc1.frequency.setValueAtTime(65.41, now); // C2
+  osc1.type = 'triangle'; 
+  osc1.frequency.setValueAtTime(65.41, now); 
   
   gain1.gain.setValueAtTime(0.4, now);
   gain1.gain.exponentialRampToValueAtTime(0.001, now + duration);
@@ -141,11 +142,11 @@ export const playLose = () => {
   osc1.start(now);
   osc1.stop(now + duration);
 
-  // Oscillator 2: Detuned slightly for "chorus/beating" dark effect + Minor interval
+  // Oscillator 2: Detuned slightly for "chorus/beating"
   const osc2 = ctx.createOscillator();
   const gain2 = ctx.createGain();
   osc2.type = 'triangle';
-  osc2.frequency.setValueAtTime(77.78, now); // Eb2 (Minor 3rd) - Sad/Dark interval
+  osc2.frequency.setValueAtTime(77.78, now); 
   
   gain2.gain.setValueAtTime(0.25, now);
   gain2.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.8);
