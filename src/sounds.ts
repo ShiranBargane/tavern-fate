@@ -4,70 +4,65 @@ let audioCtx: AudioContext | null = null;
 
 const initAudio = (): AudioContext => {
   if (!audioCtx) {
-    // Handle the webkit prefix for Safari/older browsers safely
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (AudioContextClass) {
         audioCtx = new AudioContextClass();
     }
   }
-  // Safe check if context exists and is suspended
   if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume().catch(e => console.error(e));
   }
-  
-  // Cast to AudioContext because usage implies we expect it to work or fail gracefully elsewhere
   return audioCtx as AudioContext;
 };
 
 // Generic Oscillator Helper
 const playTone = (freq: number, type: OscillatorType, duration: number, delay: number = 0, vol: number = 0.1) => {
   const ctx = initAudio();
-  if (!ctx) return; // Safety check
+  if (!ctx) return;
 
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
 
+  const t = ctx.currentTime;
+
   osc.type = type;
-  osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+  osc.frequency.setValueAtTime(freq, t + delay);
   
-  gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
-  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + duration);
+  gain.gain.setValueAtTime(vol, t + delay);
+  gain.gain.exponentialRampToValueAtTime(0.01, t + delay + duration);
 
   osc.connect(gain);
   gain.connect(ctx.destination);
 
-  osc.start(ctx.currentTime + delay);
-  osc.stop(ctx.currentTime + delay + duration);
+  osc.start(t + delay);
+  osc.stop(t + delay + duration);
 };
-
-// --- CLICK / TAP SOUNDS ---
 
 // Helper for the "fingernail tap" sound
 const playTick = (ctx: AudioContext, frequency: number) => {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
+  const t = ctx.currentTime;
 
   osc.type = 'triangle';
-  osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+  osc.frequency.setValueAtTime(frequency, t);
   
   // Instant attack, very fast decay
-  gain.gain.setValueAtTime(0.15, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+  gain.gain.setValueAtTime(0.15, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
 
   osc.connect(gain);
   gain.connect(ctx.destination);
 
   osc.start();
-  osc.stop(ctx.currentTime + 0.05);
+  osc.stop(t + 0.05);
 };
 
 export const playBlip = () => {
-  // Simple UI cursor move/select sound
   playTone(400, 'square', 0.05, 0, 0.05);
 };
 
 export const playSelect = () => {
-  // Confirm action sound
   playTone(600, 'square', 0.1, 0, 0.05);
   playTone(800, 'square', 0.1, 0.05, 0.05);
 };
@@ -76,83 +71,65 @@ export const playCoinFlip = () => {
   const ctx = initAudio();
   if (!ctx) return;
   
-  // Randomize between 3 subtle pitch variations of the "High Tick"
   const variant = Math.floor(Math.random() * 3);
 
   switch (variant) {
-    case 0:
-      // Standard High Tick (Original)
-      playTick(ctx, 3000);
-      break;
-    case 1:
-      // Slightly Higher / Sharper
-      playTick(ctx, 3300);
-      break;
-    case 2:
-      // Slightly Lower / Dullier
-      playTick(ctx, 2750);
-      break;
+    case 0: playTick(ctx, 3000); break;
+    case 1: playTick(ctx, 3300); break;
+    case 2: playTick(ctx, 2750); break;
   }
 };
 
 export const playCoinLand = (isHeads: boolean) => {
-  // Coin shimmer / Ding sound
-  const baseFreq = isHeads ? 1200 : 900; // Heads slightly higher pitch
+  const baseFreq = isHeads ? 1200 : 900;
   playTone(baseFreq, 'sine', 0.5, 0, 0.1);
   playTone(baseFreq * 1.5, 'sine', 0.5, 0.05, 0.05);
 };
 
 export const playWin = () => {
-  // Gothic Victory Fanfare
   const ctx = initAudio();
   if (!ctx) return;
+
+  const type = 'sawtooth';
   
-  // REMOVED: const now = ctx.currentTime; (It was unused here and causing the error)
-
-  const type = 'sawtooth'; 
-
-  // Fast rising arpeggio
+  // No 'now' variable declared here to avoid errors
   playTone(440.00, type, 0.15, 0.00, 0.15); // A4
   playTone(554.37, type, 0.15, 0.08, 0.15); // C#5
   playTone(659.25, type, 0.40, 0.16, 0.15); // E5
-  
-  // Subtle harmony/bass note
   playTone(220.00, 'triangle', 0.40, 0.00, 0.2); // A3
 };
 
 export const playLose = () => {
-  // Gothic Defeat: Deep, Somber Bell (Low frequency cluster)
   const ctx = initAudio();
   if (!ctx) return;
-  const now = ctx.currentTime; // Used here, so we keep it
-
+  
+  // We use this strictly for scheduling
+  const t = ctx.currentTime;
   const duration = 1.5;
 
-  // Oscillator 1: Fundamental (Low C)
+  // Oscillator 1
   const osc1 = ctx.createOscillator();
   const gain1 = ctx.createGain();
-  osc1.type = 'triangle'; 
-  osc1.frequency.setValueAtTime(65.41, now); 
-  
-  gain1.gain.setValueAtTime(0.4, now);
-  gain1.gain.exponentialRampToValueAtTime(0.001, now + duration);
+  osc1.type = 'triangle';
+  osc1.frequency.setValueAtTime(65.41, t); // C2
+  gain1.gain.setValueAtTime(0.4, t);
+  gain1.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
   osc1.connect(gain1);
   gain1.connect(ctx.destination);
-  osc1.start(now);
-  osc1.stop(now + duration);
+  osc1.start(t);
+  osc1.stop(t + duration);
 
-  // Oscillator 2: Detuned slightly for "chorus/beating"
+  // Oscillator 2
   const osc2 = ctx.createOscillator();
   const gain2 = ctx.createGain();
   osc2.type = 'triangle';
-  osc2.frequency.setValueAtTime(77.78, now); 
-  
-  gain2.gain.setValueAtTime(0.25, now);
-  gain2.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.8);
+  osc2.frequency.setValueAtTime(77.78, t); // Eb2
+  gain2.gain.setValueAtTime(0.25, t);
+  gain2.gain.exponentialRampToValueAtTime(0.001, t + duration * 0.8);
 
   osc2.connect(gain2);
   gain2.connect(ctx.destination);
-  osc2.start(now);
-  osc2.stop(now + duration);
+  osc2.start(t);
+  osc2.stop(t + duration);
 };
