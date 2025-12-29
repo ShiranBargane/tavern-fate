@@ -1,0 +1,5 @@
+{
+  "name": "Toss a coin",
+  "description": "minimal coin flipper with a pixelated aesthetic.",
+  "requestFramePermissions": []
+}

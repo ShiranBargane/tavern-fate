@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+    <title>Tavern Fate</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              retro: ['"VT323"', 'monospace'],
+            },
+            colors: {
+              'void-dark': '#050505',
+              'parchment': '#c2b280',
+              'parchment-dim': '#8a7f5a',
+              'blood': '#4a0404',
+              'gold-dim': '#8a6e1e',
+              'gold-bright': '#d4af37',
+              'wood-dark': '#1a120b',
+              'wood-light': '#3e2723',
+            },
+            animation: {
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'idle-float': 'idleFloat 4s ease-in-out infinite',
+              'shadow-idle': 'shadowIdle 4s ease-in-out infinite',
+            },
+            keyframes: {
+              coinJump: {
+                '0%': { transform: 'translateZ(0) scale(1)' },
+                '50%': { transform: 'translateZ(400px) scale(1.3)' },
+                '100%': { transform: 'translateZ(0) scale(1)' },
+              },
+              shadowScale: {
+                '0%': { transform: 'scale(1)', opacity: '0.8' },
+                '50%': { transform: 'scale(0.5)', opacity: '0.3' },
+                '100%': { transform: 'scale(1)', opacity: '0.8' },
+              },
+              idleFloat: {
+                '0%, 100%': { transform: 'translateZ(0) rotateX(0deg) rotateY(0deg)' },
+                '50%': { transform: 'translateZ(20px) rotateX(4deg) rotateY(-4deg)' },
+              },
+              shadowIdle: {
+                '0%, 100%': { transform: 'translate(-50%, -50%) scale(1)', opacity: '0.6' },
+                '50%': { transform: 'translate(-50%, -50%) scale(0.85)', opacity: '0.4' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        background-color: #050505;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .pixelated {
+        image-rendering: pixelated;
+      }
+      .preserve-3d {
+        transform-style: preserve-3d;
+      }
+      .backface-hidden {
+        backface-visibility: hidden;
+      }
+      
+      /* Pseudo-3D coin thickness logic */
+      .coin-layer {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        backface-visibility: hidden;
+      }
+      
+      /* Animation Classes */
+      .animate-jump {
+        animation: coinJump 1.5s ease-in-out forwards;
+      }
+      .animate-shadow {
+        animation: shadowScale 1.5s ease-in-out forwards;
+      }
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
