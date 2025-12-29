@@ -22,12 +22,12 @@ const COLORS = {
   goldEdge2: '#92400E',
   goldBg: '#FEF3C7',     
 
-  // Silver Side - UPDATED: Bright Silver
-  silverBody: '#cbd5e1',  // Slate 300 (Light Silver)
-  silverFeature: '#475569', // Slate 600 (Darker detail)
-  silverHighlight: '#ffffff', // White Highlight
-  silverEdge1: '#64748b', // Slate 500
-  silverEdge2: '#1e293b', // Slate 800
+  // Silver Side
+  silverBody: '#cbd5e1',  // Slate 300
+  silverFeature: '#475569', // Slate 600
+  silverHighlight: '#ffffff',
+  silverEdge1: '#64748b',
+  silverEdge2: '#1e293b',
   silverBg: '#FEF3C7'     
 };
 
@@ -146,14 +146,12 @@ const FACES: Record<CoinFaceType, string[]> = {
   // --- TAILS (SILVER) ---
   
   skull: [
-    // Flipped Vertically (Inverted) per request
-    // Jaw at Top (low index), Cranium at Bottom (high index)
     "0000000000000000",
     "0000000000000000",
     "0000000000000000",
     "0000000000000000",
-    "0000022222200000", // Jaw
-    "0000020202200000", // Teeth
+    "0000022222200000",
+    "0000020202200000",
     "0000022222200000",
     "0000002022000000",
     "0000022222220000",
@@ -161,17 +159,16 @@ const FACES: Record<CoinFaceType, string[]> = {
     "0000220002200000",
     "0000222222222000",
     "0000222222222000",
-    "0000002222200000", // Cranium
+    "0000002222200000",
     "0000000000000000",
     "0000000000000000",
   ],
   ghost: [
-    // Standard Sheet Ghost (Top-to-Bottom)
     "0000000000000000",
-    "0000001111000000", // Head Top
+    "0000001111000000",
     "0000111111110000",
     "0001111111111000",
-    "0001101100111000", // Eyes
+    "0001101100111000",
     "0001111111111000",
     "0001111111111000", 
     "0001111111111000",
@@ -179,25 +176,25 @@ const FACES: Record<CoinFaceType, string[]> = {
     "0001111111111000",
     "0001111111111000",
     "0001111111111000",
-    "0001110111011100", // Feet
+    "0001110111011100",
     "0001000100010000", 
     "0000000000000000",
     "0000000000000000",
   ],
   serpent: [
     "0000000000000000",
-    "0000022222000000", // Head top
-    "0000220202000000", // Eye / Snout
-    "0002022222200000", // Jaw / Neck
-    "0020220000000000", // Tongue out
-    "0000220000000000", // Neck curve
-    "0000022222000000", // Body curve right
+    "0000022222000000",
+    "0000220202000000",
+    "0002022222200000",
+    "0020220000000000",
+    "0000220000000000",
+    "0000022222000000",
     "0000000002200000",
     "0000000022000000",
-    "0000000220000000", // Body curve left
+    "0000000220000000",
     "0000022200000000",
     "0000220000000000",
-    "0000222222200000", // Base Coil
+    "0000222222200000",
     "0000222222200000",
     "0000000000000000",
     "0000000000000000",
@@ -231,8 +228,6 @@ const createCoinLayer = (
 ) => {
   const pixels = [];
 
-  // Background Circle for the 'Fragment' look
-  // Heads: Light/Parchment. Tails: Dark/Void.
    if (!isEdge && bgColor) {
      pixels.push(
         <circle key="bg-circle" cx={SIZE/2} cy={SIZE/2} r={SIZE/2 - 0.5} fill={bgColor} />
@@ -245,7 +240,7 @@ const createCoinLayer = (
         let fill = colorBody;
         
         if (char === '2') fill = colorFeature;
-        if (char === '1') fill = colorFeature; // Support for '1' from Ghost design
+        if (char === '1') fill = colorFeature;
         
         if (isEdge && char === '0') fill = colorBody; 
 
@@ -283,7 +278,6 @@ const createCoinLayer = (
 export const Coin: React.FC<CoinProps> = ({ rotation, isFlipping, onClick, headsType, tailsType }) => {
   const LAYERS = 16; 
   
-  // Pass background colors to the face layers
   const headsSVG = useMemo(() => createCoinLayer(COLORS.goldBody, COLORS.goldFeature, FACES[headsType], false, COLORS.goldBg), [headsType]);
   const tailsSVG = useMemo(() => createCoinLayer(COLORS.silverBody, COLORS.silverFeature, FACES[tailsType], false, COLORS.silverBg), [tailsType]);
   
@@ -293,7 +287,7 @@ export const Coin: React.FC<CoinProps> = ({ rotation, isFlipping, onClick, heads
   return (
     <div className="relative group cursor-pointer" onClick={onClick}>
       
-      {/* Shadow - Darkened to match red table */}
+      {/* Shadow */}
       <div className={`
         absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
         w-40 h-16 bg-red-950/60 rounded-[50%] blur-lg filter
@@ -323,17 +317,13 @@ export const Coin: React.FC<CoinProps> = ({ rotation, isFlipping, onClick, heads
               let Content = edgeGoldSVG; 
               let extraTransform = '';
 
-              // TAILS (Bottom/Back Layer) - Index 0
               if (i === 0) {
                  Content = tailsSVG;
-                 // rotateZ(180deg) ensures it isn't upside down when flipped over X
                  extraTransform = 'rotateY(180deg) rotateZ(180deg)';
               } 
-              // HEADS (Top/Front Layer) - Index 15
               else if (i === LAYERS - 1) {
                  Content = headsSVG;
               }
-              // EDGE LAYERS
               else {
                 Content = i > LAYERS / 2 ? edgeGoldSVG : edgeSilverSVG;
               }
@@ -348,8 +338,6 @@ export const Coin: React.FC<CoinProps> = ({ rotation, isFlipping, onClick, heads
                   }}
                 >
                   {Content}
-                  
-                  {/* Dynamic Lighting Overlay */}
                   {i > 0 && i < LAYERS - 1 && (
                     <div className="absolute inset-0 bg-white/10 mix-blend-overlay" />
                   )}
