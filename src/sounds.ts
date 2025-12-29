@@ -1,10 +1,11 @@
 // Simple 8-bit Retro Sound Synthesizer using Web Audio API
 
+// Helper to handle Web Audio Context globally
 let audioCtx: AudioContext | null = null;
 
-// Initialize context lazily or on user interaction
 const getAudioContext = (): AudioContext | null => {
   if (!audioCtx) {
+    // Safari requires webkitAudioContext
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (AudioContextClass) {
       audioCtx = new AudioContextClass();
@@ -18,17 +19,21 @@ export const unlockAudioContext = () => {
   const ctx = getAudioContext();
   if (!ctx) return;
 
-  if (ctx.state === 'suspended') {
-    ctx.resume();
+  // Always try to resume
+  if (ctx.state === 'suspended' || (ctx.state as string) === 'interrupted') {
+    ctx.resume().catch((e) => console.warn("Audio resume failed", e));
   }
 
   // Play a silent buffer to physically wake up the audio thread
-  // This is more reliable on iOS than just creating an oscillator
-  const buffer = ctx.createBuffer(1, 1, 22050);
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-  source.connect(ctx.destination);
-  source.start(0);
+  try {
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+  } catch (e) {
+      console.warn("Audio wake up buffer failed", e);
+  }
 };
 
 // Generic Oscillator Helper
