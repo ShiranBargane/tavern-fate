@@ -1,54 +1,44 @@
 // Simple 8-bit Retro Sound Synthesizer using Web Audio API
 
-// Global context to persist across function calls
 let audioCtx: AudioContext | null = null;
 
-const initAudio = (): AudioContext | null => {
+// Initialize context lazily or on user interaction
+const getAudioContext = (): AudioContext | null => {
   if (!audioCtx) {
-    // Explicitly handle the webkit prefix for Safari
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (AudioContextClass) {
-        audioCtx = new AudioContextClass();
+      audioCtx = new AudioContextClass();
     }
   }
   return audioCtx;
 };
 
-// CRITICAL FOR MOBILE: This MUST be called inside a synchronous user event (touchstart/click)
+// CRITICAL: Call this on 'touchstart' or 'click' to unlock audio on iOS
 export const unlockAudioContext = () => {
-    const ctx = initAudio();
-    if (!ctx) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
 
-    // Resume if suspended (common in Chrome/Safari)
-    if (ctx.state === 'suspended') {
-        ctx.resume().then(() => {
-            console.log("Audio Context Resumed");
-        }).catch(e => console.error(e));
-    }
+  if (ctx.state === 'suspended') {
+    ctx.resume();
+  }
 
-    // Play a tiny silent oscillator to force the audio engine to wake up on iOS
-    try {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = 440;
-        gain.gain.value = 0.001; // Nearly silent but active
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(0);
-        osc.stop(0.1);
-    } catch (e) {
-        console.error("Audio warmup failed", e);
-    }
+  // Play a silent buffer to physically wake up the audio thread
+  // This is more reliable on iOS than just creating an oscillator
+  const buffer = ctx.createBuffer(1, 1, 22050);
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(ctx.destination);
+  source.start(0);
 };
 
 // Generic Oscillator Helper
 const playTone = (freq: number, type: OscillatorType, duration: number, delay: number = 0, vol: number = 0.1) => {
-  const ctx = initAudio();
+  const ctx = getAudioContext();
   if (!ctx) return;
 
-  // Double check state before playing
+  // Ensure we try to resume if it suspended in the background
   if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
+    ctx.resume().catch(() => {});
   }
 
   const osc = ctx.createOscillator();
@@ -59,8 +49,8 @@ const playTone = (freq: number, type: OscillatorType, duration: number, delay: n
   osc.type = type;
   osc.frequency.setValueAtTime(freq, t + delay);
   
-  // Slightly increased volume for mobile speakers
-  gain.gain.setValueAtTime(vol * 1.5, t + delay); 
+  // Volume envelope
+  gain.gain.setValueAtTime(vol, t + delay);
   gain.gain.exponentialRampToValueAtTime(0.001, t + delay + duration);
 
   osc.connect(gain);
@@ -79,8 +69,8 @@ const playTick = (ctx: AudioContext, frequency: number) => {
   osc.type = 'triangle';
   osc.frequency.setValueAtTime(frequency, t);
   
-  // Instant attack, very fast decay
-  gain.gain.setValueAtTime(0.2, t); // Boosted volume
+  // Instant attack, very fast decay (click sound)
+  gain.gain.setValueAtTime(0.3, t); // Louder for mobile
   gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
 
   osc.connect(gain);
@@ -100,11 +90,11 @@ export const playSelect = () => {
 };
 
 export const playCoinFlip = () => {
-  const ctx = initAudio();
+  const ctx = getAudioContext();
   if (!ctx) return;
   
   const variant = Math.floor(Math.random() * 3);
-
+  // Higher frequencies cut through mobile speakers better
   switch (variant) {
     case 0: playTick(ctx, 3000); break;
     case 1: playTick(ctx, 3300); break;
@@ -114,34 +104,27 @@ export const playCoinFlip = () => {
 
 export const playCoinLand = (isHeads: boolean) => {
   const baseFreq = isHeads ? 1200 : 900;
-  playTone(baseFreq, 'sine', 0.5, 0, 0.15);
+  playTone(baseFreq, 'sine', 0.5, 0, 0.2);
   playTone(baseFreq * 1.5, 'sine', 0.5, 0.05, 0.1);
 };
 
 export const playWin = () => {
-  const ctx = initAudio();
-  if (!ctx) return;
-
-  const type = 'sawtooth';
-  
-  playTone(440.00, type, 0.15, 0.00, 0.15); // A4
-  playTone(554.37, type, 0.15, 0.08, 0.15); // C#5
-  playTone(659.25, type, 0.40, 0.16, 0.15); // E5
-  playTone(220.00, 'triangle', 0.40, 0.00, 0.2); // A3
+  playTone(440.00, 'sawtooth', 0.15, 0.00, 0.15); 
+  playTone(554.37, 'sawtooth', 0.15, 0.08, 0.15); 
+  playTone(659.25, 'sawtooth', 0.40, 0.16, 0.15); 
+  playTone(220.00, 'triangle', 0.40, 0.00, 0.2); 
 };
 
 export const playLose = () => {
-  const ctx = initAudio();
+  const ctx = getAudioContext();
   if (!ctx) return;
-  
   const t = ctx.currentTime;
   const duration = 1.5;
 
-  // Oscillator 1
   const osc1 = ctx.createOscillator();
   const gain1 = ctx.createGain();
-  osc1.type = 'triangle';
-  osc1.frequency.setValueAtTime(65.41, t); // C2
+  osc1.type = 'triangle'; 
+  osc1.frequency.setValueAtTime(65.41, t); 
   gain1.gain.setValueAtTime(0.4, t);
   gain1.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
@@ -150,11 +133,10 @@ export const playLose = () => {
   osc1.start(t);
   osc1.stop(t + duration);
 
-  // Oscillator 2
   const osc2 = ctx.createOscillator();
   const gain2 = ctx.createGain();
   osc2.type = 'triangle';
-  osc2.frequency.setValueAtTime(77.78, t); // Eb2
+  osc2.frequency.setValueAtTime(77.78, t); 
   gain2.gain.setValueAtTime(0.25, t);
   gain2.gain.exponentialRampToValueAtTime(0.001, t + duration * 0.8);
 
