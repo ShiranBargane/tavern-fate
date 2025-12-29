@@ -4,8 +4,6 @@ import { CRTEffect } from './components/CRTEffect';
 import { CoinSide } from './types';
 import { playBlip, playSelect, playCoinFlip, playCoinLand, playWin, playLose } from './sounds';
 
-// --- DATA LISTS ---
-
 const HEADS_VARIANTS: CoinFaceType[] = ['king', 'sun', 'jester', 'harvest'];
 const TAILS_VARIANTS: CoinFaceType[] = ['skull', 'ghost', 'serpent'];
 const RARE_HEADS: CoinFaceType = 'dragon';
@@ -59,7 +57,6 @@ const PHRASES: Record<CoinFaceType, string[]> = {
   ]
 };
 
-// --- SHORT COMMENTARY FOR COMPETITIVE MODE ---
 const GAME_PHRASES = [
   "FATE TURNS...", "DESTINY CALLS", "HOLD FAST", "A BOLD STRIKE", 
   "THE DIE IS CAST", "FORTUNE SMILES?", "DARKNESS WATCHES", "LIGHT REVEALS",
@@ -67,27 +64,24 @@ const GAME_PHRASES = [
   "STEEL YOURSELF", "THE COIN KNOWS", "CHANCE OR FATE?", "DO NOT BLINK"
 ];
 
-// --- QUOTES FOR GAME MODE ---
 const WIN_QUOTES = [
-  "I am the master of my fate,\nI am the captain of my soul.", // Invictus
-  "Success is counted sweetest\nBy those who ne'er succeed.", // Dickinson
-  "To strive, to seek, to find,\nand not to yield.", // Ulysses
+  "I am the master of my fate,\nI am the captain of my soul.",
+  "Success is counted sweetest\nBy those who ne'er succeed.",
+  "To strive, to seek, to find,\nand not to yield.",
   "Fortune favors the bold.",
   "The stars incline us, they do not bind us.",
 ];
 
 const LOSE_QUOTES = [
-  "Look on my works, ye Mighty,\nand despair!", // Ozymandias
-  "The best laid schemes o' mice an' men\nGang aft a-gley.", // Burns
-  "All hope abandon,\nye who enter here.", // Dante
-  "This is the way the world ends,\nNot with a bang but a whimper.", // Eliot
+  "Look on my works, ye Mighty,\nand despair!",
+  "The best laid schemes o' mice an' men\nGang aft a-gley.",
+  "All hope abandon,\nye who enter here.",
+  "This is the way the world ends,\nNot with a bang but a whimper.",
   "Dust thou art, and unto dust\nshalt thou return.",
 ];
 
-// Wood texture
 const woodPattern = `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E")`;
 
-// --- TYPES ---
 const GameMode = {
   FREE_PLAY: 'FREE_PLAY',
   SETUP: 'SETUP',
@@ -112,7 +106,6 @@ export default function App() {
   const [message, setMessage] = useState<string>("");
   const [stats, setStats] = useState({ heads: 0, tails: 0 });
 
-  // Game Logic State
   const [mode, setMode] = useState<GameMode>(GameMode.FREE_PLAY);
   const [gameState, setGameState] = useState<GameState>({
     targetFlips: 3,
@@ -122,18 +115,15 @@ export default function App() {
     gameTails: 0,
   });
 
-  // Current visual state of the coin
   const [headsFace, setHeadsFace] = useState<CoinFaceType>('king');
   const [tailsFace, setTailsFace] = useState<CoinFaceType>('skull');
 
-  // Determine Winner
   const playerWins = 
     (gameState.chosenSide === CoinSide.HEADS && gameState.gameHeads > gameState.gameTails) ||
     (gameState.chosenSide === CoinSide.TAILS && gameState.gameTails > gameState.gameHeads);
 
   const isDraw = gameState.gameHeads === gameState.gameTails;
 
-  // Sound Effect for Game Result
   useEffect(() => {
     if (mode === GameMode.GAME_RESULT) {
       if (isDraw) {
@@ -158,11 +148,9 @@ export default function App() {
     setIsFlipping(true);
     playCoinFlip(); 
 
-    // 1. Determine Result
     const isHeads = Math.random() > 0.5;
     const newResult = isHeads ? CoinSide.HEADS : CoinSide.TAILS;
 
-    // 2. Select Visuals
     const isRare = Math.random() < 0.05;
     let selectedFace: CoinFaceType;
     let nextHeads = headsFace;
@@ -179,7 +167,6 @@ export default function App() {
     setHeadsFace(nextHeads);
     setTailsFace(nextTails);
 
-    // 3. Select Phrase
     let randomMsg = "";
     if (mode === GameMode.FREE_PLAY) {
         const phrases = PHRASES[selectedFace];
@@ -188,7 +175,6 @@ export default function App() {
         randomMsg = GAME_PHRASES[Math.floor(Math.random() * GAME_PHRASES.length)];
     }
 
-    // 4. Calculate Rotation
     const minSpins = 5;
     const degreesPerSpin = 360;
     const baseRotation = minSpins * degreesPerSpin;
@@ -203,20 +189,17 @@ export default function App() {
     targetRotation += adjustment;
     setRotation(targetRotation);
 
-    // 5. Finish Animation & Update Logic
     setTimeout(() => {
       setIsFlipping(false);
       setLastResult(newResult);
       setMessage(randomMsg);
       playCoinLand(isHeads); 
       
-      // Update Global Stats
       setStats(prev => ({
         heads: prev.heads + (isHeads ? 1 : 0),
         tails: prev.tails + (!isHeads ? 1 : 0)
       }));
 
-      // --- GAME MODE LOGIC ---
       if (mode === GameMode.GAME_ACTIVE) {
         setGameState(prev => {
           const newState = {
@@ -238,7 +221,6 @@ export default function App() {
 
   }, [isFlipping, rotation, headsFace, tailsFace, mode, gameState]);
 
-  // Keyboard Support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
@@ -253,8 +235,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleFlip, mode]);
 
-
-  // Game Setup Helpers
   const startGame = () => {
     playSelect();
     setGameState({
@@ -279,20 +259,17 @@ export default function App() {
     <div className="relative min-h-screen w-full bg-void-dark text-parchment font-retro overflow-hidden flex flex-col items-center justify-center select-none">
       <CRTEffect />
       
-      {/* 3D Scene Container */}
       <div 
         className="relative w-full h-screen flex flex-col items-center justify-center perspective-[800px] overflow-hidden bg-wood-dark"
         style={{
           boxShadow: 'inset 0 0 150px #000',
         }}
       >
-        {/* Table Surface */}
         <div 
           className="absolute inset-0 bg-gradient-to-b from-[#4a0404] to-[#21140e]"
           style={{ backgroundImage: woodPattern, backgroundSize: '200px' }}
         />
         
-        {/* === LIGHTING FX === */}
         <div 
             className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-full pointer-events-none z-0"
             style={{
@@ -312,14 +289,11 @@ export default function App() {
         <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay pointer-events-none" />
 
 
-        {/* === MAIN UI LAYOUT === */}
         {(mode === GameMode.FREE_PLAY || mode === GameMode.GAME_ACTIVE) && (
           <>
-             {/* === COIN === */}
             <div 
               className="relative preserve-3d transition-transform duration-700 z-10"
               style={{ 
-                // Adjusted translateY for better mobile fit
                 transform: 'rotateX(30deg) translateY(-40px)', 
               }}
             >
@@ -332,15 +306,11 @@ export default function App() {
               />
             </div>
 
-            {/* === UI OVERLAY === */}
             <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 md:p-8 z-20">
               
-              {/* HEADER: Responsive Spacing */}
               <div className="flex justify-between w-full max-w-xl mx-auto pt-2 md:pt-8 px-0 md:px-2 items-start transition-all duration-300">
                  {mode === GameMode.FREE_PLAY ? (
-                    // Free Play Stats - INCREASED SIZE (Approx +30%)
                     <>
-                      {/* Left: Total */}
                       <div className="transform -rotate-2">
                          <div className="bg-black/90 border border-stone-700 p-3 md:p-5 rounded-sm text-center min-w-[110px] md:min-w-[130px] shadow-2xl backdrop-blur-sm">
                            <div className="text-stone-500 text-xs md:text-sm tracking-widest uppercase mb-1 font-bold">Total</div>
@@ -348,15 +318,12 @@ export default function App() {
                          </div>
                       </div>
 
-                      {/* Right: Heads & Tails */}
                       <div className="flex gap-2 transform rotate-1">
-                          {/* Heads Box */}
                           <div className="bg-[#2a0a0a] border border-[#5c4033] p-3 md:p-5 rounded-sm text-center min-w-[100px] md:min-w-[120px] shadow-2xl backdrop-blur-sm">
                             <div className="text-amber-500 text-xs md:text-sm tracking-widest uppercase mb-1 font-bold">Heads</div>
                             <div className="text-4xl md:text-5xl text-white font-bold drop-shadow-md font-retro">{stats.heads}</div>
                           </div>
                           
-                          {/* Tails Box */}
                           <div className="bg-slate-900 border border-slate-700 p-3 md:p-5 rounded-sm text-center min-w-[100px] md:min-w-[120px] shadow-2xl backdrop-blur-sm">
                             <div className="text-slate-400 text-xs md:text-sm tracking-widest uppercase mb-1 font-bold">Tails</div>
                             <div className="text-4xl md:text-5xl text-white font-bold drop-shadow-md font-retro">{stats.tails}</div>
@@ -364,7 +331,6 @@ export default function App() {
                       </div>
                     </>
                  ) : (
-                    // Game Active Scoreboard - INCREASED SIZE
                     <div className="w-full flex justify-center">
                       <div className="flex flex-col items-center gap-2 md:gap-3 bg-black/60 p-4 md:p-6 rounded-lg backdrop-blur-md border border-stone-600">
                         <div className="text-parchment text-xl md:text-2xl tracking-[0.2em] font-bold drop-shadow-md">
@@ -383,13 +349,10 @@ export default function App() {
                  )}
               </div>
 
-              {/* BOTTOM: Message or Interaction - Responsive Spacing */}
               <div className="text-center pb-4 md:pb-16 w-full max-w-4xl mx-auto pointer-events-auto">
                 
-                {/* Result Display */}
                    <div className={`transition-all duration-300 transform ${isFlipping ? 'opacity-0 translate-y-8 blur-sm' : 'opacity-100 translate-y-0 blur-0'}`}>
                      {(lastResult || mode === GameMode.GAME_ACTIVE) && (
-                        // Reduced pt from 24 to 12 for mobile to save vertical space
                        <div className="inline-flex flex-col items-center gap-2 md:gap-6 pt-12 md:pt-24">
                           {lastResult && (
                               <div className={`text-5xl md:text-9xl tracking-widest font-bold drop-shadow-[6px_6px_0_rgba(0,0,0,0.8)] ${lastResult === CoinSide.HEADS ? 'text-gold-bright' : 'text-slate-300'}`}>
@@ -397,10 +360,8 @@ export default function App() {
                               </div>
                           )}
                           
-                          {/* Styled Signboard Plaque */}
                           {message && (
                             <div className="relative group mt-2 md:mt-4">
-                                {/* Background Plate */}
                                 <div className={`absolute inset-0 border-2 transform rotate-1 shadow-2xl rounded-sm transition-colors duration-500 ${
                                     (lastResult === CoinSide.HEADS || (!lastResult && mode === GameMode.GAME_ACTIVE && gameState.chosenSide === CoinSide.HEADS)) 
                                     ? 'bg-[#2a0a0a] border-[#5c4033]' 
@@ -413,13 +374,11 @@ export default function App() {
                                     : (lastResult === CoinSide.TAILS ? 'bg-slate-950 border-slate-800' : 'bg-[#0c0502] border-stone-900')
                                 }`}></div>
                                 
-                                {/* Rivets */}
                                 <div className="absolute top-2 left-2 w-1 h-1 bg-gold-dim rounded-full shadow-sm"></div>
                                 <div className="absolute top-2 right-2 w-1 h-1 bg-gold-dim rounded-full shadow-sm"></div>
                                 <div className="absolute bottom-2 left-2 w-1 h-1 bg-gold-dim rounded-full shadow-sm"></div>
                                 <div className="absolute bottom-2 right-2 w-1 h-1 bg-gold-dim rounded-full shadow-sm"></div>
 
-                                {/* Text Container */}
                                 <div className="relative bg-transparent py-2 px-6 md:py-4 md:px-10 min-w-[240px] md:min-w-[300px]">
                                   <div className={`text-lg md:text-2xl tracking-[0.2em] font-bold uppercase drop-shadow-md ${lastResult === CoinSide.HEADS ? 'text-amber-100' : 'text-slate-200'}`}>
                                       {message}
@@ -430,7 +389,6 @@ export default function App() {
                        </div>
                      )}
                      
-                     {/* Initial State / Idle Message */}
                      {!lastResult && mode === GameMode.FREE_PLAY && (
                        <div className="flex flex-col gap-4 md:gap-6 pt-12 md:pt-24">
                          <div className="inline-block px-4 py-2 md:px-6 md:py-3 bg-black/60 backdrop-blur-md border border-parchment-dim/30 rounded-lg cursor-pointer hover:border-parchment transition-colors" onClick={handleFlip}>
@@ -451,8 +409,6 @@ export default function App() {
                      )}
                    </div>
                 
-                
-                {/* Mode Switch Back (Only when result is shown in Free Play) */}
                 {mode === GameMode.FREE_PLAY && lastResult && !isFlipping && (
                     <div className="mt-4 md:mt-8">
                          <button 
@@ -471,7 +427,6 @@ export default function App() {
           </>
         )}
 
-        {/* MODE: SETUP SCREEN */}
         {mode === GameMode.SETUP && (
           <div className="z-30 flex flex-col items-center gap-6 md:gap-8 bg-black/80 p-6 md:p-12 border-4 border-double border-parchment-dim max-w-md w-[90%] md:w-full backdrop-blur-md max-h-screen overflow-y-auto">
              <h2 className="text-xl md:text-3xl text-parchment tracking-[0.2em] border-b border-parchment-dim pb-4">GAME OF FATE</h2>
@@ -532,7 +487,6 @@ export default function App() {
           </div>
         )}
 
-        {/* MODE: RESULT SCREEN */}
         {mode === GameMode.GAME_RESULT && (
            <div className="z-30 flex flex-col items-center text-center p-4 md:p-8 max-w-2xl w-full">
               <div className={`text-4xl md:text-6xl mb-4 md:mb-6 font-bold tracking-widest ${playerWins ? 'text-gold-bright animate-pulse' : 'text-blood'}`}>
