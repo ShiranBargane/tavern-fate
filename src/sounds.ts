@@ -92,7 +92,6 @@ export const playWin = () => {
 
   const type = 'sawtooth';
   
-  // No 'now' variable declared here to avoid errors
   playTone(440.00, type, 0.15, 0.00, 0.15); // A4
   playTone(554.37, type, 0.15, 0.08, 0.15); // C#5
   playTone(659.25, type, 0.40, 0.16, 0.15); // E5
@@ -103,7 +102,6 @@ export const playLose = () => {
   const ctx = initAudio();
   if (!ctx) return;
   
-  // We use this strictly for scheduling
   const t = ctx.currentTime;
   const duration = 1.5;
 
