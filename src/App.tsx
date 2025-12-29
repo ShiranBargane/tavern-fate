@@ -127,8 +127,10 @@ export default function App() {
   // Unlock Audio on Mount/Interaction
   useEffect(() => {
     const handleInteraction = () => {
+        // Unlock immediately on touch or click
         unlockAudioContext();
-        // Remove listeners after first successful unlock
+        
+        // Remove listeners
         window.removeEventListener('click', handleInteraction);
         window.removeEventListener('touchstart', handleInteraction);
         window.removeEventListener('keydown', handleInteraction);
@@ -161,6 +163,9 @@ export default function App() {
     if (isFlipping) return;
     if (mode === GameMode.GAME_RESULT) return;
     if (mode === GameMode.SETUP) return; 
+
+    // Explicitly unlock audio again just in case the first interaction missed it
+    unlockAudioContext();
 
     if (mode === GameMode.GAME_ACTIVE && gameState.currentFlips >= gameState.targetFlips) {
       return;
@@ -277,11 +282,12 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-void-dark text-parchment font-retro overflow-hidden flex flex-col items-center justify-center select-none">
+    // Use h-[100dvh] for mobile browsers (dynamic viewport height)
+    <div className="relative h-[100dvh] w-full bg-void-dark text-parchment font-retro overflow-hidden flex flex-col items-center justify-center select-none">
       <CRTEffect />
       
       <div 
-        className="relative w-full h-screen flex flex-col items-center justify-center perspective-[800px] overflow-hidden bg-wood-dark"
+        className="relative w-full h-full flex flex-col items-center justify-center perspective-[800px] overflow-hidden bg-wood-dark"
         style={{
           boxShadow: 'inset 0 0 150px #000',
         }}
@@ -317,8 +323,8 @@ export default function App() {
             <div 
               className="relative preserve-3d transition-transform duration-700 z-10"
               style={{ 
-                // Adjusted: Moved up slightly to fit bottom text better on mobile
-                transform: 'rotateX(30deg) translateY(-50px)', 
+                // MOVED UP SIGNIFICANTLY: -120px to bring it closer to the top stats
+                transform: 'rotateX(30deg) translateY(-120px)', 
               }}
             >
               <Coin 
@@ -333,7 +339,7 @@ export default function App() {
             {/* === UI OVERLAY === */}
             <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 md:p-8 z-20">
               
-              {/* HEADER: Made padding much smaller for mobile */}
+              {/* HEADER: Made padding smaller for mobile */}
               <div className="flex justify-between w-full max-w-xl mx-auto pt-2 md:pt-8 px-0 md:px-2 items-start transition-all duration-300">
                  {mode === GameMode.FREE_PLAY ? (
                     <>
@@ -382,8 +388,8 @@ export default function App() {
                 
                    <div className={`transition-all duration-300 transform ${isFlipping ? 'opacity-0 translate-y-8 blur-sm' : 'opacity-100 translate-y-0 blur-0'}`}>
                      {(lastResult || mode === GameMode.GAME_ACTIVE) && (
-                       // Reduced top padding (pt-12 -> pt-6)
-                       <div className="inline-flex flex-col items-center gap-2 md:gap-6 pt-6 md:pt-24">
+                       // Reduced top padding (pt-4 -> pt-6)
+                       <div className="inline-flex flex-col items-center gap-2 md:gap-6 pt-4 md:pt-12">
                           {lastResult && (
                               <div className={`text-5xl md:text-9xl tracking-widest font-bold drop-shadow-[6px_6px_0_rgba(0,0,0,0.8)] ${lastResult === CoinSide.HEADS ? 'text-gold-bright' : 'text-slate-300'}`}>
                                  {lastResult}
@@ -421,7 +427,7 @@ export default function App() {
                      
                      {!lastResult && mode === GameMode.FREE_PLAY && (
                        // Compacted idle state
-                       <div className="flex flex-col gap-3 md:gap-6 pt-6 md:pt-24">
+                       <div className="flex flex-col gap-3 md:gap-6 pt-6 md:pt-12">
                          <div className="inline-block px-4 py-2 md:px-6 md:py-3 bg-black/60 backdrop-blur-md border border-parchment-dim/30 rounded-lg cursor-pointer hover:border-parchment transition-colors" onClick={handleFlip}>
                            <p className="text-parchment text-lg md:text-xl tracking-widest animate-pulse">
                              [ CLICK THE COIN TO DECIDE ]
@@ -460,7 +466,7 @@ export default function App() {
         )}
 
         {mode === GameMode.SETUP && (
-          <div className="z-30 flex flex-col items-center gap-4 md:gap-8 bg-black/80 p-6 md:p-12 border-4 border-double border-parchment-dim max-w-md w-[90%] md:w-full backdrop-blur-md max-h-[90vh] overflow-y-auto">
+          <div className="z-30 flex flex-col items-center gap-4 md:gap-8 bg-black/80 p-6 md:p-12 border-4 border-double border-parchment-dim max-w-md w-[90%] md:w-full backdrop-blur-md max-h-[90dvh] overflow-y-auto">
              <h2 className="text-xl md:text-3xl text-parchment tracking-[0.2em] border-b border-parchment-dim pb-2 md:pb-4">GAME OF FATE</h2>
              
              <div className="flex flex-col gap-2 md:gap-4 w-full">
