@@ -1,8 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Coin, type CoinFaceType } from './components/Coin';
 import { CRTEffect } from './components/CRTEffect';
 import { CoinSide } from './types';
 import { playBlip, playSelect, playCoinFlip, playCoinLand, playWin, playLose, unlockAudioContext } from './sounds';
+
+// Silent MP3 Data URI (1 frame of silence) - used to unlock iOS Audio
+const SILENT_AUDIO = "data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
 
 const HEADS_VARIANTS: CoinFaceType[] = ['king', 'sun', 'jester', 'harvest'];
 const TAILS_VARIANTS: CoinFaceType[] = ['skull', 'ghost', 'serpent'];
@@ -117,6 +120,9 @@ export default function App() {
 
   const [headsFace, setHeadsFace] = useState<CoinFaceType>('king');
   const [tailsFace, setTailsFace] = useState<CoinFaceType>('skull');
+  
+  // Reference to the silent audio element
+  const silentAudioRef = useRef<HTMLAudioElement>(null);
 
   const playerWins = 
     (gameState.chosenSide === CoinSide.HEADS && gameState.gameHeads > gameState.gameTails) ||
@@ -127,9 +133,22 @@ export default function App() {
   // Unlock Audio on Mount/Interaction
   useEffect(() => {
     const handleInteraction = () => {
+        // 1. Unlock Web Audio API
         unlockAudioContext();
-        // Don't remove listeners immediately on some browsers, keep them active for a bit
-        // But for cleanliness we can remove after a short delay or just once
+
+        // 2. Unlock HTML5 Audio (the hack for iOS Safari)
+        if (silentAudioRef.current) {
+            silentAudioRef.current.muted = false; // Unmute
+            silentAudioRef.current.play().catch(e => {
+                // It might fail if interaction wasn't trusted, but usually works on touchstart
+                console.log("Silent audio play failed", e);
+            });
+        }
+        
+        // Remove listeners to avoid repeated calls
+        window.removeEventListener('click', handleInteraction);
+        window.removeEventListener('touchstart', handleInteraction);
+        window.removeEventListener('keydown', handleInteraction);
     };
 
     window.addEventListener('click', handleInteraction);
@@ -160,7 +179,9 @@ export default function App() {
     if (mode === GameMode.GAME_RESULT) return;
     if (mode === GameMode.SETUP) return; 
 
+    // Unlock again on explicit action just in case
     unlockAudioContext();
+    if (silentAudioRef.current) silentAudioRef.current.play().catch(() => {});
 
     if (mode === GameMode.GAME_ACTIVE && gameState.currentFlips >= gameState.targetFlips) {
       return;
@@ -280,6 +301,16 @@ export default function App() {
     <div className="relative h-[100dvh] w-full bg-void-dark text-parchment font-retro overflow-hidden flex flex-col items-center justify-center select-none">
       <CRTEffect />
       
+      {/* Hidden Audio Element for iOS Unlock */}
+      <audio 
+          ref={silentAudioRef} 
+          src={SILENT_AUDIO} 
+          muted 
+          autoPlay={false} 
+          loop={false} 
+          style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} 
+      />
+
       <div 
         className="relative w-full h-full flex flex-col items-center justify-center perspective-[800px] overflow-hidden bg-wood-dark"
         style={{
@@ -316,8 +347,8 @@ export default function App() {
             <div 
               className="relative preserve-3d transition-transform duration-700 z-10"
               style={{ 
-                // LOWERED COIN: -30px (was -120px in previous failed attempt)
-                transform: 'rotateX(30deg) translateY(-30px)', 
+                // LOWERED COIN SIGNIFICANTLY: +50px
+                transform: 'rotateX(30deg) translateY(50px)', 
               }}
             >
               <Coin 
@@ -378,8 +409,8 @@ export default function App() {
                 
                    <div className={`transition-all duration-300 transform ${isFlipping ? 'opacity-0 translate-y-8 blur-sm' : 'opacity-100 translate-y-0 blur-0'}`}>
                      {(lastResult || mode === GameMode.GAME_ACTIVE) && (
-                       // REMOVED PADDING-TOP (was pt-4/12). Added negative margin to pull it UP.
-                       <div className="inline-flex flex-col items-center gap-1 md:gap-6 mt-[-10px] md:mt-0">
+                       // REMOVED ALL PADDING. Added negative margin. This will pull it very close to the lowered coin.
+                       <div className="inline-flex flex-col items-center gap-1 md:gap-6 mt-[-30px] md:mt-0">
                           {lastResult && (
                               <div className={`text-5xl md:text-9xl tracking-widest font-bold drop-shadow-[6px_6px_0_rgba(0,0,0,0.8)] ${lastResult === CoinSide.HEADS ? 'text-gold-bright' : 'text-slate-300'}`}>
                                  {lastResult}
@@ -417,7 +448,7 @@ export default function App() {
                      
                      {!lastResult && mode === GameMode.FREE_PLAY && (
                        // Removed top padding
-                       <div className="flex flex-col gap-3 md:gap-6 mt-[-10px] md:mt-0">
+                       <div className="flex flex-col gap-3 md:gap-6 mt-[-30px] md:mt-0">
                          <div className="inline-block px-4 py-2 md:px-6 md:py-3 bg-black/60 backdrop-blur-md border border-parchment-dim/30 rounded-lg cursor-pointer hover:border-parchment transition-colors" onClick={handleFlip}>
                            <p className="text-parchment text-lg md:text-xl tracking-widest animate-pulse">
                              [ CLICK THE COIN TO DECIDE ]
