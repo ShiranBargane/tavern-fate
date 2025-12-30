@@ -32,6 +32,8 @@
               'hand-enter-top': 'handEnterTop 1s cubic-bezier(0.25, 1, 0.5, 1) forwards',
               'hand-poke': 'handPoke 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               'hand-idle': 'handIdle 3s ease-in-out infinite',
+              'flame-outer': 'flameWaver 0.1s ease-in-out infinite alternate',
+              'flame-inner': 'flameWaver 0.15s ease-in-out infinite alternate-reverse',
             },
             keyframes: {
               coinJump: {
@@ -68,6 +70,10 @@
               pixelFall: {
                 '0%': { transform: 'translateY(0)', opacity: '1' },
                 '100%': { transform: 'translateY(150px)', opacity: '0' },
+              },
+              flameWaver: {
+                '0%': { transform: 'scale(1) skewX(0deg)' },
+                '100%': { transform: 'scale(1.1) skewX(2deg)' },
               }
             }
           },
@@ -89,6 +95,9 @@
       }
       .backface-hidden {
         backface-visibility: hidden;
+      }
+      .shape-rendering-crisp {
+        shape-rendering: crispEdges;
       }
       
       /* Pseudo-3D coin thickness logic */
