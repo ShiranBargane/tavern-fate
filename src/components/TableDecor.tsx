@@ -1,5 +1,3 @@
-import React from 'react';
-
 const CandleSVG = () => (
   <svg viewBox="0 0 20 40" className="w-full h-full drop-shadow-2xl shape-rendering-crisp">
     <defs>
