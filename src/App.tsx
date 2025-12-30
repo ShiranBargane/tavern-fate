@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Coin, type CoinFaceType } from './components/Coin';
 import { Hand } from './components/Hand';
 import { CRTEffect } from './components/CRTEffect';
+import { TableDecor } from './components/TableDecor';
 import { CoinSide } from './types';
 import { playBlip, playCoinFlip, playCoinLand, playWin, playLose, unlockAudioContext, playWind, playOrganStart } from './sounds';
 
@@ -401,6 +402,9 @@ export default function App() {
         <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#000000_100%)] opacity-90" />
         
+        {/* Decorative Table Elements */}
+        <TableDecor />
+
         <div 
             className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-full pointer-events-none z-0"
             style={{
