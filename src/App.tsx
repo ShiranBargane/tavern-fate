@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Coin, type CoinFaceType } from './components/Coin';
+import { Hand } from './components/Hand';
 import { CRTEffect } from './components/CRTEffect';
 import { CoinSide } from './types';
-import { playBlip, playSelect, playCoinFlip, playCoinLand, playWin, playLose, unlockAudioContext } from './sounds';
+import { playBlip, playSelect, playCoinFlip, playCoinLand, playWin, playLose, unlockAudioContext, playWind, playOrganStart } from './sounds';
 
 // Silent MP3 Data URI (1 frame of silence) - used to unlock iOS Audio
 const SILENT_AUDIO = "data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
@@ -83,7 +84,14 @@ const LOSE_QUOTES = [
   "Dust thou art, and unto dust\nshalt thou return.",
 ];
 
-const woodPattern = `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E")`;
+const EXIT_PHRASES = [
+  "[ RETURN TO SHADOWS ]",
+  "[ FADE INTO DARKNESS ]",
+  "[ FORSAKE YOUR FATE ]",
+  "[ SEVER THE CONNECTION ]",
+  "[ FLEE - YOU WILL RETURN ]",
+  "[ DISSOLVE INTO VOID ]"
+];
 
 const GameMode = {
   FREE_PLAY: 'FREE_PLAY',
@@ -109,6 +117,10 @@ export default function App() {
   const [message, setMessage] = useState<string>("");
   const [stats, setStats] = useState({ heads: 0, tails: 0 });
 
+  // Hand State
+  const [isHandFlicking, setIsHandFlicking] = useState(false);
+  const [isHandEntering, setIsHandEntering] = useState(false); // Blocks input during enter animation
+
   const [mode, setMode] = useState<GameMode>(GameMode.FREE_PLAY);
   const [gameState, setGameState] = useState<GameState>({
     targetFlips: 3,
@@ -121,7 +133,8 @@ export default function App() {
   const [headsFace, setHeadsFace] = useState<CoinFaceType>('king');
   const [tailsFace, setTailsFace] = useState<CoinFaceType>('skull');
   
-  // Reference to the silent audio element
+  const [exitPhrase, setExitPhrase] = useState(EXIT_PHRASES[0]);
+
   const silentAudioRef = useRef<HTMLAudioElement>(null);
 
   const playerWins = 
@@ -130,22 +143,23 @@ export default function App() {
 
   const isDraw = gameState.gameHeads === gameState.gameTails;
 
-  // Unlock Audio on Mount/Interaction
+  // Hand is visible in Active AND Result (to maintain presence)
+  const isHandVisible = mode === GameMode.GAME_ACTIVE || mode === GameMode.GAME_RESULT;
+  
+  // Scene should render in all modes except SETUP (where we might want a clean menu, or maybe overlay setup too? keeping setup as separate for now)
+  const showScene = mode !== GameMode.SETUP;
+
+  const isGameEnding = mode === GameMode.GAME_ACTIVE && gameState.currentFlips >= gameState.targetFlips;
+  
+  const isHandCrumbling = false;
+
   useEffect(() => {
     const handleInteraction = () => {
-        // 1. Unlock Web Audio API
         unlockAudioContext();
-
-        // 2. Unlock HTML5 Audio (the hack for iOS Safari)
         if (silentAudioRef.current) {
-            silentAudioRef.current.muted = false; // Unmute
-            silentAudioRef.current.play().catch(e => {
-                // It might fail if interaction wasn't trusted, but usually works on touchstart
-                console.log("Silent audio play failed", e);
-            });
+            silentAudioRef.current.muted = false; 
+            silentAudioRef.current.play().catch(e => console.log("Silent audio play failed", e));
         }
-        
-        // Remove listeners to avoid repeated calls
         window.removeEventListener('click', handleInteraction);
         window.removeEventListener('touchstart', handleInteraction);
         window.removeEventListener('keydown', handleInteraction);
@@ -164,6 +178,9 @@ export default function App() {
 
   useEffect(() => {
     if (mode === GameMode.GAME_RESULT) {
+      // Pick random exit phrase
+      setExitPhrase(EXIT_PHRASES[Math.floor(Math.random() * EXIT_PHRASES.length)]);
+      
       if (isDraw) {
         playLose();
       } else if (playerWins) {
@@ -174,22 +191,7 @@ export default function App() {
     }
   }, [mode, playerWins, isDraw]);
 
-  const handleFlip = useCallback(() => {
-    if (isFlipping) return;
-    if (mode === GameMode.GAME_RESULT) return;
-    if (mode === GameMode.SETUP) return; 
-
-    // Unlock again on explicit action just in case
-    unlockAudioContext();
-    if (silentAudioRef.current) silentAudioRef.current.play().catch(() => {});
-
-    if (mode === GameMode.GAME_ACTIVE && gameState.currentFlips >= gameState.targetFlips) {
-      return;
-    }
-
-    setIsFlipping(true);
-    playCoinFlip(); 
-
+  const triggerFlipLogic = useCallback(() => {
     const isHeads = Math.random() > 0.5;
     const newResult = isHeads ? CoinSide.HEADS : CoinSide.TAILS;
 
@@ -244,6 +246,8 @@ export default function App() {
 
       if (mode === GameMode.GAME_ACTIVE) {
         setGameState(prev => {
+          if (prev.currentFlips >= prev.targetFlips) return prev;
+
           const newState = {
             ...prev,
             currentFlips: prev.currentFlips + 1,
@@ -252,7 +256,8 @@ export default function App() {
           };
 
           if (newState.currentFlips >= prev.targetFlips) {
-            setTimeout(() => setMode(GameMode.GAME_RESULT), 1000);
+            // Reduced delay from 1500 to 600ms
+            setTimeout(() => setMode(GameMode.GAME_RESULT), 600);
           }
           
           return newState;
@@ -260,8 +265,48 @@ export default function App() {
       }
 
     }, 1500);
+  }, [mode, rotation, headsFace, tailsFace, gameState]);
 
-  }, [isFlipping, rotation, headsFace, tailsFace, mode, gameState]);
+  const handleFlip = useCallback(() => {
+    // Guards
+    if (isFlipping) return;
+    if (isHandFlicking) return; 
+    if (mode === GameMode.SETUP) return; 
+
+    unlockAudioContext();
+    if (silentAudioRef.current) silentAudioRef.current.play().catch(() => {});
+
+    if (isHandEntering) {
+        playBlip(); 
+        return;     
+    }
+
+    if (mode === GameMode.GAME_RESULT) {
+        return;
+    }
+
+    if (mode === GameMode.GAME_ACTIVE && gameState.currentFlips >= gameState.targetFlips) {
+       return;
+    }
+
+    // Execution
+    if (mode === GameMode.FREE_PLAY) {
+        setIsFlipping(true);
+        playCoinFlip();
+        triggerFlipLogic();
+    } else {
+        // Immediately lock input
+        setIsHandFlicking(true);
+        
+        setTimeout(() => {
+            setIsFlipping(true);
+            playCoinFlip(); 
+            triggerFlipLogic();
+            setIsHandFlicking(false); 
+        }, 100); 
+    }
+
+  }, [isFlipping, isHandFlicking, mode, gameState, triggerFlipLogic, isHandEntering]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -278,7 +323,16 @@ export default function App() {
   }, [handleFlip, mode]);
 
   const startGame = () => {
-    playSelect();
+    const isRestarting = mode === GameMode.GAME_RESULT;
+
+    // Only play organ when starting from SETUP (Free Play -> Active)
+    if (!isRestarting) {
+        playOrganStart();
+    } else {
+        // When restarting from Result screen, use a lighter sound
+        playBlip();
+    }
+
     setGameState({
       targetFlips: gameState.targetFlips,
       chosenSide: gameState.chosenSide,
@@ -288,20 +342,46 @@ export default function App() {
     });
     setMode(GameMode.GAME_ACTIVE);
     setLastResult(null);
-    setRotation(0); 
+    // REMOVED: setRotation(0);  -- Keeps the coin where it landed to avoid spin-back
+    
+    // Only lock input if we are doing the entrance animation (coming from Setup)
+    if (!isRestarting) {
+        setIsHandEntering(true);
+        setTimeout(() => {
+            setIsHandEntering(false);
+        }, 1100); 
+    } else {
+        setIsHandEntering(false);
+    }
   };
 
   const resetToMenu = () => {
-    playBlip();
+    if (mode === GameMode.GAME_ACTIVE && gameState.currentFlips >= gameState.targetFlips) {
+        return;
+    }
+
+    if (mode === GameMode.GAME_ACTIVE) {
+        playWind(); 
+    } else {
+        playBlip();
+    }
     setMode(GameMode.FREE_PLAY);
     setLastResult(null);
+    setIsHandEntering(false);
   };
 
   return (
     <div className="relative h-[100dvh] w-full bg-void-dark text-parchment font-retro overflow-hidden flex flex-col items-center justify-center select-none">
+      <style>{`
+        @keyframes resultEnter {
+          0% { opacity: 0; transform: scale(0.9) translateY(10px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-result-enter {
+          animation: resultEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
       <CRTEffect />
-      
-      {/* Hidden Audio Element for iOS Unlock */}
       <audio 
           ref={silentAudioRef} 
           src={SILENT_AUDIO} 
@@ -312,42 +392,31 @@ export default function App() {
       />
 
       <div 
-        className="relative w-full h-full flex flex-col items-center justify-center perspective-[800px] overflow-hidden bg-wood-dark"
+        className="relative w-full h-full flex flex-col items-center justify-center perspective-[800px] overflow-hidden bg-[#0c0a0a]"
         style={{
           boxShadow: 'inset 0 0 150px #000',
         }}
       >
-        <div 
-          className="absolute inset-0 bg-gradient-to-b from-[#4a0404] to-[#21140e]"
-          style={{ backgroundImage: woodPattern, backgroundSize: '200px' }}
-        />
+        <div className="absolute inset-0 bg-[#0f0505]" />
+        <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#000000_100%)] opacity-90" />
         
         <div 
             className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-full pointer-events-none z-0"
             style={{
-                background: 'linear-gradient(to bottom, rgba(255, 230, 180, 0.2) 0%, transparent 90%)',
+                background: 'linear-gradient(to bottom, rgba(255, 230, 180, 0.05) 0%, transparent 90%)',
                 clipPath: 'polygon(45% 0%, 55% 0%, 90% 100%, 10% 100%)',
                 mixBlendMode: 'screen',
                 filter: 'blur(4px)',
             }}
         />
-        <div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full pointer-events-none mix-blend-screen" 
-          style={{
-             background: 'radial-gradient(circle, rgba(255,220,150,0.3) 0%, rgba(255,180,100,0.05) 50%, transparent 70%)',
-             filter: 'blur(30px)',
-          }}
-        />
-        <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay pointer-events-none" />
 
-
-        {(mode === GameMode.FREE_PLAY || mode === GameMode.GAME_ACTIVE) && (
+        {showScene && (
           <>
-             {/* === COIN === */}
+             {/* === COIN & HAND === */}
             <div 
               className="relative preserve-3d transition-transform duration-700 z-10"
               style={{ 
-                // ADJUSTED TO 20px AS REQUESTED
                 transform: 'rotateX(30deg) translateY(20px)', 
               }}
             >
@@ -358,68 +427,104 @@ export default function App() {
                 headsType={headsFace}
                 tailsType={tailsFace}
               />
+              <Hand isVisible={isHandVisible} isFlicking={isHandFlicking} isCrumbling={isHandCrumbling} />
             </div>
 
             {/* === UI OVERLAY === */}
             <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 md:p-8 z-20">
               
-              <div className="flex justify-between w-full max-w-xl mx-auto pt-2 md:pt-8 px-0 md:px-2 items-start transition-all duration-300">
-                 {mode === GameMode.FREE_PLAY ? (
-                    <>
+              <div className="flex justify-between w-full mx-auto pt-2 md:pt-4 px-0 items-start transition-all duration-300">
+                 
+                 {/* FREE PLAY HEADER (Rotated Cards) */}
+                 {mode === GameMode.FREE_PLAY && (
+                    <div className="w-full max-w-xl mx-auto flex justify-between">
                       <div className="transform -rotate-2">
-                         <div className="bg-black/90 border border-stone-700 p-2 md:p-5 rounded-sm text-center min-w-[80px] md:min-w-[130px] shadow-2xl backdrop-blur-sm">
+                         <div className="bg-black/90 border border-stone-700 p-2 md:p-5 rounded-none text-center min-w-[80px] md:min-w-[130px] shadow-2xl backdrop-blur-sm">
                            <div className="text-stone-500 text-[10px] md:text-sm tracking-widest uppercase mb-1 font-bold">Total</div>
                            <div className="text-3xl md:text-5xl text-stone-300 font-bold drop-shadow-md font-retro">{stats.heads + stats.tails}</div>
                          </div>
                       </div>
 
                       <div className="flex gap-2 transform rotate-1">
-                          <div className="bg-[#2a0a0a] border border-[#5c4033] p-2 md:p-5 rounded-sm text-center min-w-[70px] md:min-w-[120px] shadow-2xl backdrop-blur-sm">
+                          <div className="bg-[#2a0a0a] border border-[#5c4033] p-2 md:p-5 rounded-none text-center min-w-[70px] md:min-w-[120px] shadow-2xl backdrop-blur-sm">
                             <div className="text-amber-500 text-[10px] md:text-sm tracking-widest uppercase mb-1 font-bold">Heads</div>
                             <div className="text-3xl md:text-5xl text-white font-bold drop-shadow-md font-retro">{stats.heads}</div>
                           </div>
                           
-                          <div className="bg-slate-900 border border-slate-700 p-2 md:p-5 rounded-sm text-center min-w-[70px] md:min-w-[120px] shadow-2xl backdrop-blur-sm">
+                          <div className="bg-slate-900 border border-slate-700 p-2 md:p-5 rounded-none text-center min-w-[70px] md:min-w-[120px] shadow-2xl backdrop-blur-sm">
                             <div className="text-slate-400 text-[10px] md:text-sm tracking-widest uppercase mb-1 font-bold">Tails</div>
                             <div className="text-3xl md:text-5xl text-white font-bold drop-shadow-md font-retro">{stats.tails}</div>
                           </div>
                       </div>
-                    </>
-                 ) : (
-                    <div className="w-full flex justify-center">
-                      <div className="flex flex-col items-center gap-2 md:gap-3 bg-black/60 p-4 md:p-6 rounded-lg backdrop-blur-md border border-stone-600">
-                        <div className="text-parchment text-lg md:text-2xl tracking-[0.2em] font-bold drop-shadow-md">
-                          FLIP {gameState.currentFlips} / {gameState.targetFlips}
+                    </div>
+                 )}
+
+                 {/* GAME ACTIVE HUD - PS1 FIGHTING STYLE */}
+                 {mode === GameMode.GAME_ACTIVE && (
+                    <div className="w-full flex justify-between items-start px-2 relative pointer-events-auto">
+                        
+                        {/* LEFT: HEADS SCORE */}
+                        <div className={`
+                            border-2 p-2 md:p-4 bg-[#1a0505] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
+                            transition-all duration-300
+                            ${gameState.chosenSide === CoinSide.HEADS ? 'border-gold-bright scale-105' : 'border-[#5c4033] opacity-80'}
+                        `}>
+                             <div className="text-[10px] md:text-xs text-amber-500 tracking-widest uppercase mb-1 font-bold">Heads</div>
+                             <div className="text-3xl md:text-5xl text-gold-bright font-bold font-retro leading-none">
+                                {gameState.gameHeads}
+                             </div>
                         </div>
-                        <div className="flex gap-4 md:gap-8">
-                            <div className={`text-xl md:text-4xl font-bold transition-all duration-300 ${gameState.chosenSide === CoinSide.HEADS ? 'text-gold-bright scale-110' : 'text-slate-500'}`}>
-                              H: {gameState.gameHeads}
-                            </div>
-                            <div className={`text-xl md:text-4xl font-bold transition-all duration-300 ${gameState.chosenSide === CoinSide.TAILS ? 'text-slate-300 scale-110' : 'text-slate-700'}`}>
-                              T: {gameState.gameTails}
-                            </div>
+
+                        {/* CENTER: ROUND INFO */}
+                        <div className="flex flex-col items-center mt-2">
+                             <div className="bg-black border border-stone-600 px-4 py-1 text-parchment text-lg md:text-2xl font-bold tracking-[0.2em] shadow-lg">
+                                 ROUND {gameState.currentFlips}/{gameState.targetFlips}
+                             </div>
+                             {!isGameEnding && (
+                                <button 
+                                    onClick={resetToMenu}
+                                    className="mt-2 text-[10px] text-red-800 hover:text-red-500 uppercase tracking-widest bg-black/50 px-2"
+                                >
+                                    [ Yield ]
+                                </button>
+                             )}
                         </div>
-                      </div>
+
+                        {/* RIGHT: TAILS SCORE */}
+                        <div className={`
+                            border-2 p-2 md:p-4 bg-[#0f172a] shadow-[-4px_4px_0px_0px_rgba(0,0,0,1)]
+                            transition-all duration-300
+                            ${gameState.chosenSide === CoinSide.TAILS ? 'border-slate-300 scale-105' : 'border-slate-700 opacity-80'}
+                        `}>
+                             <div className="text-[10px] md:text-xs text-slate-400 tracking-widest uppercase mb-1 font-bold text-right">Tails</div>
+                             <div className="text-3xl md:text-5xl text-slate-200 font-bold font-retro leading-none text-right">
+                                {gameState.gameTails}
+                             </div>
+                        </div>
+
                     </div>
                  )}
               </div>
 
               {/* BOTTOM: Compacted significantly */}
               <div className="text-center pb-8 md:pb-16 w-full max-w-4xl mx-auto pointer-events-auto">
-                
+                   
                    <div className={`transition-all duration-300 transform ${isFlipping ? 'opacity-0 translate-y-8 blur-sm' : 'opacity-100 translate-y-0 blur-0'}`}>
                      {(lastResult || mode === GameMode.GAME_ACTIVE) && (
-                       // INCREASED NEGATIVE MARGIN (-60px) TO FOLLOW THE COIN UPWARDS
                        <div className="inline-flex flex-col items-center gap-1 md:gap-6 mt-[-60px] md:mt-[-20px]">
-                          {lastResult && (
+                          {/* Only show big letter in Free Play or if specifically desired. In Active, HUD handles score. 
+                              Let's keep big letter for impact but maybe smaller in Active? 
+                              Actually, keeping it consistent is fine.
+                           */}
+                          {lastResult && mode !== GameMode.GAME_RESULT && (
                               <div className={`text-5xl md:text-9xl tracking-widest font-bold drop-shadow-[6px_6px_0_rgba(0,0,0,0.8)] ${lastResult === CoinSide.HEADS ? 'text-gold-bright' : 'text-slate-300'}`}>
                                  {lastResult}
                               </div>
                           )}
                           
-                          {message && (
+                          {message && mode !== GameMode.GAME_RESULT && (
                             <div className="relative group mt-0 md:mt-4">
-                                <div className={`absolute inset-0 border-2 transform rotate-1 shadow-2xl rounded-sm transition-colors duration-500 ${
+                                <div className={`absolute inset-0 border-2 transform rotate-1 shadow-2xl rounded-none transition-colors duration-500 ${
                                     (lastResult === CoinSide.HEADS || (!lastResult && mode === GameMode.GAME_ACTIVE && gameState.chosenSide === CoinSide.HEADS)) 
                                     ? 'bg-[#2a0a0a] border-[#5c4033]' 
                                     : (lastResult === CoinSide.TAILS ? 'bg-slate-900 border-slate-700' : 'bg-[#1a0a05] border-stone-800')
@@ -431,10 +536,10 @@ export default function App() {
                                     : (lastResult === CoinSide.TAILS ? 'bg-slate-950 border-slate-800' : 'bg-[#0c0502] border-stone-900')
                                 }`}></div>
                                 
-                                <div className="absolute top-2 left-2 w-1 h-1 bg-gold-dim rounded-full shadow-sm"></div>
-                                <div className="absolute top-2 right-2 w-1 h-1 bg-gold-dim rounded-full shadow-sm"></div>
-                                <div className="absolute bottom-2 left-2 w-1 h-1 bg-gold-dim rounded-full shadow-sm"></div>
-                                <div className="absolute bottom-2 right-2 w-1 h-1 bg-gold-dim rounded-full shadow-sm"></div>
+                                <div className="absolute top-2 left-2 w-1 h-1 bg-gold-dim rounded-none shadow-sm"></div>
+                                <div className="absolute top-2 right-2 w-1 h-1 bg-gold-dim rounded-none shadow-sm"></div>
+                                <div className="absolute bottom-2 left-2 w-1 h-1 bg-gold-dim rounded-none shadow-sm"></div>
+                                <div className="absolute bottom-2 right-2 w-1 h-1 bg-gold-dim rounded-none shadow-sm"></div>
 
                                 <div className="relative bg-transparent py-2 px-4 md:py-4 md:px-10 min-w-[200px] md:min-w-[300px]">
                                   <div className={`text-base md:text-2xl tracking-[0.2em] font-bold uppercase drop-shadow-md ${lastResult === CoinSide.HEADS ? 'text-amber-100' : 'text-slate-200'}`}>
@@ -447,9 +552,8 @@ export default function App() {
                      )}
                      
                      {!lastResult && mode === GameMode.FREE_PLAY && (
-                       // INCREASED NEGATIVE MARGIN HERE TOO
                        <div className="flex flex-col gap-3 md:gap-6 mt-[-60px] md:mt-[-20px]">
-                         <div className="inline-block px-4 py-2 md:px-6 md:py-3 bg-black/60 backdrop-blur-md border border-parchment-dim/30 rounded-lg cursor-pointer hover:border-parchment transition-colors" onClick={handleFlip}>
+                         <div className="inline-block px-4 py-2 md:px-6 md:py-3 bg-black/60 backdrop-blur-md border border-parchment-dim/30 rounded-none cursor-pointer hover:border-parchment transition-colors" onClick={handleFlip}>
                            <p className="text-parchment text-lg md:text-xl tracking-widest animate-pulse">
                              [ CLICK THE COIN TO DECIDE ]
                            </p>
@@ -466,6 +570,7 @@ export default function App() {
                        </div>
                      )}
                    </div>
+                   
                 
                 {mode === GameMode.FREE_PLAY && lastResult && !isFlipping && (
                     <div className="mt-2 md:mt-8">
@@ -485,9 +590,10 @@ export default function App() {
           </>
         )}
 
+        {/* SETUP SCREEN */}
         {mode === GameMode.SETUP && (
-          <div className="z-30 flex flex-col items-center gap-4 md:gap-8 bg-black/80 p-6 md:p-12 border-4 border-double border-parchment-dim max-w-md w-[90%] md:w-full backdrop-blur-md max-h-[90dvh] overflow-y-auto">
-             <h2 className="text-xl md:text-3xl text-parchment tracking-[0.2em] border-b border-parchment-dim pb-2 md:pb-4">GAME OF FATE</h2>
+          <div className="z-30 flex flex-col items-center gap-4 md:gap-8 bg-black/90 p-6 md:p-12 border-4 border-double border-parchment-dim max-w-md w-[90%] md:w-full backdrop-blur-sm max-h-[90dvh] overflow-y-auto">
+             <h2 className="text-xl md:text-3xl text-parchment tracking-[0.2em] border-b-2 border-parchment-dim pb-2 md:pb-4">GAME OF FATE</h2>
              
              <div className="flex flex-col gap-2 md:gap-4 w-full">
                <label className="text-stone-400 text-xs md:text-sm tracking-widest uppercase">Choose your Alliance</label>
@@ -497,7 +603,7 @@ export default function App() {
                         playBlip();
                         setGameState(p => ({...p, chosenSide: CoinSide.HEADS}));
                     }}
-                    className={`flex-1 py-3 md:py-4 border-2 transition-all ${gameState.chosenSide === CoinSide.HEADS ? 'border-gold-bright bg-yellow-900/20 text-gold-bright' : 'border-stone-700 text-stone-600'}`}
+                    className={`flex-1 py-3 md:py-4 border-2 transition-all rounded-none ${gameState.chosenSide === CoinSide.HEADS ? 'border-gold-bright bg-yellow-900/20 text-gold-bright' : 'border-stone-700 text-stone-600'}`}
                   >
                     HEADS
                   </button>
@@ -506,7 +612,7 @@ export default function App() {
                         playBlip();
                         setGameState(p => ({...p, chosenSide: CoinSide.TAILS}));
                     }}
-                    className={`flex-1 py-3 md:py-4 border-2 transition-all ${gameState.chosenSide === CoinSide.TAILS ? 'border-slate-300 bg-slate-900/40 text-slate-300' : 'border-stone-700 text-stone-600'}`}
+                    className={`flex-1 py-3 md:py-4 border-2 transition-all rounded-none ${gameState.chosenSide === CoinSide.TAILS ? 'border-slate-300 bg-slate-900/40 text-slate-300' : 'border-stone-700 text-stone-600'}`}
                   >
                     TAILS
                   </button>
@@ -524,14 +630,14 @@ export default function App() {
                       playBlip();
                       setGameState(p => ({...p, targetFlips: parseInt(e.target.value)}));
                   }}
-                  className="w-full h-4 bg-stone-800 rounded-lg appearance-none cursor-pointer accent-gold-bright"
+                  className="w-full h-4 bg-stone-800 rounded-none appearance-none cursor-pointer accent-gold-bright"
                 />
              </div>
 
              <div className="flex flex-col gap-2 w-full mt-2 md:mt-4">
                 <button 
                   onClick={startGame}
-                  className="w-full py-3 md:py-3 bg-parchment text-black font-bold text-lg md:text-xl tracking-widest hover:bg-gold-bright transition-colors"
+                  className="w-full py-3 md:py-3 bg-parchment text-black font-bold text-lg md:text-xl tracking-widest hover:bg-gold-bright transition-colors rounded-none border-2 border-transparent hover:border-white"
                 >
                   BEGIN
                 </button>
@@ -545,14 +651,22 @@ export default function App() {
           </div>
         )}
 
+        {/* RESULT OVERLAY (Scene is visible underneath) */}
         {mode === GameMode.GAME_RESULT && (
-           <div className="z-30 flex flex-col items-center text-center p-4 md:p-8 max-w-2xl w-full">
-              <div className={`text-4xl md:text-6xl mb-4 md:mb-6 font-bold tracking-widest ${playerWins ? 'text-gold-bright animate-pulse' : 'text-blood'}`}>
-                 {isDraw ? "STALEMATE" : (playerWins ? "VICTORY" : "DEFEAT")}
+           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center text-center p-4 bg-black/50 pointer-events-none animate-result-enter">
+              
+              <div className="mb-8 transform scale-125 md:scale-150">
+                <div className={`text-6xl md:text-9xl font-bold tracking-widest drop-shadow-[0_10px_10px_rgba(0,0,0,1)] ${
+                    playerWins 
+                        ? 'text-gold-bright animate-pulse' 
+                        : (isDraw ? 'text-stone-400' : 'text-blood animate-pulse')
+                }`}>
+                   {isDraw ? "STALEMATE" : (playerWins ? "VICTORY" : "DEFEAT")}
+                </div>
               </div>
 
-              <div className="bg-black/60 border border-stone-700 p-4 md:p-8 rounded-lg backdrop-blur-md w-full mb-6 md:mb-8">
-                 <p className="text-lg md:text-2xl text-parchment italic font-serif leading-relaxed whitespace-pre-line">
+              <div className="bg-black/80 border-2 border-stone-500 p-6 md:p-8 max-w-2xl w-full backdrop-blur-sm shadow-2xl pointer-events-auto">
+                 <p className="text-lg md:text-2xl text-parchment italic font-serif leading-relaxed whitespace-pre-line mb-8">
                    "{isDraw 
                       ? "Balance is the law of nature." 
                       : (playerWins 
@@ -561,32 +675,32 @@ export default function App() {
                         )
                     }"
                  </p>
-              </div>
 
-              <div className="flex gap-8 md:gap-12 text-xl md:text-2xl mb-8 md:mb-12 font-bold tracking-widest">
-                 <div className="flex flex-col">
-                   <span className="text-[10px] md:text-xs text-stone-500 uppercase mb-2">HEADS</span>
-                   <span className="text-gold-bright">{gameState.gameHeads}</span>
+                 <div className="flex justify-center gap-12 mb-8 border-t border-b border-stone-800 py-4">
+                     <div className="flex flex-col">
+                        <span className="text-xs text-stone-500 uppercase mb-1">HEADS</span>
+                        <span className="text-4xl text-gold-bright font-retro">{gameState.gameHeads}</span>
+                     </div>
+                     <div className="flex flex-col">
+                        <span className="text-xs text-stone-500 uppercase mb-1">TAILS</span>
+                        <span className="text-4xl text-slate-300 font-retro">{gameState.gameTails}</span>
+                     </div>
                  </div>
-                 <div className="flex flex-col">
-                   <span className="text-[10px] md:text-xs text-stone-500 uppercase mb-2">TAILS</span>
-                   <span className="text-slate-300">{gameState.gameTails}</span>
-                 </div>
-              </div>
 
-              <div className="flex flex-col gap-3 md:gap-4 w-full max-w-xs">
-                <button 
-                  onClick={startGame}
-                  className="px-6 py-3 md:px-8 md:py-3 border border-parchment text-parchment hover:bg-parchment hover:text-black transition-all uppercase tracking-widest text-sm md:text-base"
-                >
-                   Tempt Fate Again
-                </button>
-                <button 
-                  onClick={resetToMenu}
-                  className="text-stone-600 text-xs md:text-sm hover:text-stone-400 transition-colors uppercase tracking-[0.2em] p-2"
-                >
-                  [ FLEE - YOU WILL RETURN ]
-                </button>
+                 <div className="flex flex-col gap-4">
+                    <button 
+                    onClick={startGame}
+                    className="w-full py-4 border-2 border-parchment text-parchment hover:bg-parchment hover:text-black transition-all uppercase tracking-[0.2em] text-xl font-bold rounded-none"
+                    >
+                    TEMPT FATE AGAIN
+                    </button>
+                    <button 
+                    onClick={resetToMenu}
+                    className="text-stone-500 hover:text-stone-300 text-sm tracking-widest uppercase p-2"
+                    >
+                    {exitPhrase}
+                    </button>
+                 </div>
               </div>
            </div>
         )}
