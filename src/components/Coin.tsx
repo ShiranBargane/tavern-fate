@@ -27,7 +27,7 @@ const COLORS = {
   silverFeature: '#475569', // Slate 600
   silverHighlight: '#ffffff',
   silverEdge1: '#64748b',
-  silverEdge2: '#1e293b',
+  silverEdge2: '#1e293b', // Slate 800
   silverBg: '#FEF3C7'     
 };
 
@@ -287,10 +287,10 @@ export const Coin: React.FC<CoinProps> = ({ rotation, isFlipping, onClick, heads
   return (
     <div className="relative group cursor-pointer" onClick={onClick}>
       
-      {/* Shadow */}
+      {/* Shadow - Updated to Black for Slate Board */}
       <div className={`
         absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
-        w-40 h-16 bg-red-950/60 rounded-[50%] blur-lg filter
+        w-40 h-16 bg-black/70 rounded-[50%] blur-lg filter
         transition-all duration-300
         ${isFlipping ? 'scale-50 opacity-20 blur-2xl' : 'animate-shadow-idle'} 
       `} />
