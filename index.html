@@ -29,6 +29,9 @@
               'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
               'idle-float': 'idleFloat 4s ease-in-out infinite',
               'shadow-idle': 'shadowIdle 4s ease-in-out infinite',
+              'hand-enter-top': 'handEnterTop 1s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+              'hand-poke': 'handPoke 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              'hand-idle': 'handIdle 3s ease-in-out infinite',
             },
             keyframes: {
               coinJump: {
@@ -48,6 +51,23 @@
               shadowIdle: {
                 '0%, 100%': { transform: 'translate(-50%, -50%) scale(1)', opacity: '0.6' },
                 '50%': { transform: 'translate(-50%, -50%) scale(0.85)', opacity: '0.4' },
+              },
+              handEnterTop: {
+                '0%': { transform: 'translateY(-100vh)' },
+                '100%': { transform: 'translateY(0)' },
+              },
+              handPoke: {
+                '0%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(25px)' },
+                '100%': { transform: 'translateY(0)' },
+              },
+              handIdle: {
+                 '0%, 100%': { transform: 'translateY(0)' },
+                 '50%': { transform: 'translateY(-8px)' },
+              },
+              pixelFall: {
+                '0%': { transform: 'translateY(0)', opacity: '1' },
+                '100%': { transform: 'translateY(150px)', opacity: '0' },
               }
             }
           },
@@ -86,6 +106,14 @@
       .animate-shadow {
         animation: shadowScale 1.5s ease-in-out forwards;
       }
+
+      /* Dynamic Pixel Animation */
+      .animate-pixel-crumble {
+        animation-name: pixelFall;
+        animation-duration: 2.0s;
+        animation-timing-function: ease-in;
+        animation-fill-mode: forwards;
+      }
     </style>
 <script type="importmap">
 {
@@ -99,6 +127,6 @@
 </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
